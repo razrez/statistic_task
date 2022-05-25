@@ -4,6 +4,8 @@ from collections import Counter
 from scipy import stats  # модуль статистических функций
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 def load_data():
@@ -61,7 +63,7 @@ def built_hist(column):
     """Построить гистограмму частотных интервалов
         с  1 + 3.322 * math.log10(len(column)) интервалами"""
     m = int(abs(1 + 3.322 * math.log10(len(column))))
-    column.hist(bins=m)
+    column.hist(bins=m, color = "purple")
     plt.xlabel('Процент Алкоголя')
     plt.ylabel('Частота')
     # saveplot(f'built_hist_optimal{random.Random(100000)}.png')
@@ -83,7 +85,7 @@ def m_k(column, k):
 def a_3(column):
     """Ассиметрия характеризует меру скошенности графика влево или вправо
         если a_3: < 0.25 => незначительная; > 0.5 => существенная"""
-    return m_k(column, 3)/standard_deviation(column)**3
+    return m_k(column, 3) / standard_deviation(column) ** 3
 
 
 def excess(column):
@@ -95,7 +97,7 @@ def excess(column):
 
     m4 = m_k(column, 4)
     sd4 = standard_deviation(column) ** 4
-    return (m4/sd4) - 3
+    return (m4 / sd4) - 3
 
 
 def trust_interval_x(column, alpha):
@@ -108,7 +110,7 @@ def trust_interval_x(column, alpha):
     n = len(column)
     plus_minus = abs(stats.t.ppf(alpha / 2, n - 2)) * a_err
     print(f"Доверительный интервал для генерального среднего по Стьюденту надежности "
-          f"{alpha * 100}%: [{x-plus_minus} ; {x+plus_minus}]")
+          f"{alpha * 100}%: [{x - plus_minus} ; {x + plus_minus}]")
 
 
 def trust_interval_chi(column, gamma):
@@ -122,30 +124,66 @@ def trust_interval_chi(column, gamma):
     n = len(part)
     k = n - 1
 
-    alpha1 = (1-gamma)/2
-    alpha2 = (1+gamma)/2
+    alpha1 = (1 - gamma) / 2
+    alpha2 = (1 + gamma) / 2
     chi1_2 = stats.chi2.ppf(alpha1, k)
     chi2_2 = stats.chi2.ppf(alpha2, k)
 
-    end = ((n-1) * a_err)/chi1_2
-    start = ((n-1) * a_err)/chi2_2
+    end = ((n - 1) * a_err) / chi1_2
+    start = ((n - 1) * a_err) / chi2_2
     print(f"Доверительный интервал для генеральной дисперсии надежности(гамма?) "
           f"{gamma * 100}%: [{start} ; {end}]")
 
 
+def correlation(x, y):
+    corr_result = np.corrcoef(x, y)
+    print("Коэффициент корреляции:", corr_result)
+
+
+def show_correlation():
+    dataset = pd.read_csv('winequality-red.csv',
+                          sep=';', encoding='UTF-8')
+    x = dataset['free sulfur dioxide']
+    y = dataset['total sulfur dioxide']
+    data = {'x': x, 'y': y}
+    df = pd.DataFrame(data)
+    x = df.iloc[:, :-1].values
+    y = df.iloc[:, -1].values
+
+    regressor = LinearRegression()
+    regressor.fit(x, y)
+    b = regressor.intercept_
+    a = regressor.coef_
+    print(f"y = {a.mean()}x + {b}")
+
+    # Корреляция
+    # Прогноз x_max + 2
+    print("predict for y(x_max + 2): ", regressor.predict([[df.x.max() + 2]]))
+    plt.scatter(x, y, color='orange')
+    plt.plot(x, regressor.predict(x), color='red')
+    plt.title('Regression')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
+
+
 if __name__ == '__main__':
-    alcoData = exec_column('alcohol')
+    firstData = exec_column('alcohol')
 
-    print('среднее:', mean(alcoData))
-    print("медиана библиотечная:", alcoData.median())
-    print('медиана моя:', median(alcoData))
-    print('Дисперсия моя:', variance(alcoData))
-    print('Стандартное отклонение мое:', standard_deviation(alcoData))
-    print('Стандартное отклонение библиотечное:', alcoData.std(ddof=0))
-    print("Мода:", (stats.mode(alcoData)[0][0]))
-    built_hist(alcoData)
-    print("Ассиметрия:", a_3(alcoData))
-    print("Коэффициент эксцесса:", excess(alcoData))
+    print('среднее:', mean(firstData))
+    print("медиана библиотечная:", firstData.median())
+    print('медиана моя:', median(firstData))
+    print('Дисперсия моя:', variance(firstData))
+    print('Стандартное отклонение мое:', standard_deviation(firstData))
+    print('Стандартное отклонение библиотечное:', firstData.std(ddof=0))
+    print("Мода:", (stats.mode(firstData)[0][0]))
+    built_hist(firstData)
+    print("Ассиметрия:", a_3(firstData))
+    print("Коэффициент эксцесса:", excess(firstData))
 
-    trust_interval_x(alcoData, 0.95)
-    trust_interval_chi(alcoData, 0.91)
+    trust_interval_x(firstData, 0.95)
+    trust_interval_chi(firstData, 0.91)
+
+    secondData = exec_column('sulphates')
+    correlation(firstData, secondData)
+    show_correlation()
