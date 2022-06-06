@@ -1,2 +1,2 @@
 # statistic_task
-My semestr work for statitsic.
+My semestr work for math statitsic.
